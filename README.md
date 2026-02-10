@@ -28,7 +28,9 @@ Projeto_DM/
 
 ├─ README.md            # Documentação principal
 
+
 Pré-requisitos 
+-----------------------
 
 Antes de iniciar, verifique se você possui os seguintes itens instalados e configurados em sua máquina: 
 - **Docker** (versão 20.x ou superior) - Necessário para construir e executar os contêineres.
