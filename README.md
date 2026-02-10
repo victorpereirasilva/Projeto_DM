@@ -31,20 +31,20 @@ Instalação e Uso
 
 2. Abra o terminal ou prompt de comando e navegue até a pasta onde você colocou os arquivos do projeto (não use espaço ou acento em nome de pasta). Execute o comando abaixo para criar a imagem Docker:
 
-docker build -t dm-terraform-image:p .
+   docker build -t dm-terraform-image:p .
 
 3. Execute o comando abaixo para criar o container Docker:
 
-docker run -dit --name dm-p -v D:\PROJETO\Projeto_DM\IaC:/iac dm-terraform-image:p /bin/bash
+   docker run -dit --name dm-p -v D:\PROJETO\Projeto_DM\IaC:/iac dm-terraform-image:p /bin/bash
 
 4. Verifique as versões do Terraform e do AWS CLI com os comandos abaixo
 
-terraform version
-aws --version
+   terraform version
+   aws --version
 
 5. Configure a chave da AWS com o seguinte comando no container docker:
   
-aws configure
+   aws configure
 
 6. Vá para a pasta iac e execute o terraform init
 
@@ -56,8 +56,8 @@ aws configure
 
 10. Execute:
 
-terraform init
-terraform apply
+   terraform init
+   terraform apply
 
 11. Acompanhe a execução do pipeline pela interface da AWS.
 
