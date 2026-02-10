@@ -19,6 +19,7 @@ Projeto_DM/
 ├─ IaC/
 
 │  └─ terraform/        # Configurações de infraestrutura
+
 ├─ src/
 
 │  └─ main.py           # Código principal em Python
