@@ -17,10 +17,14 @@ Estrutura do Projeto
 -----------------------
 Projeto_DM/
 ├─ IaC/
+
 │  └─ terraform/        # Configurações de infraestrutura
 ├─ src/
+
 │  └─ main.py           # Código principal em Python
+
 ├─ Dockerfile           # Definição da imagem Docker
+
 ├─ README.md            # Documentação principal
 
 Instalação e Uso
