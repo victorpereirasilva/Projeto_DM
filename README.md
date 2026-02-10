@@ -28,6 +28,16 @@ Projeto_DM/
 
 ├─ README.md            # Documentação principal
 
+Pré-requisitos 
+
+Antes de iniciar, verifique se você possui os seguintes itens instalados e configurados em sua máquina: 
+- **Docker** (versão 20.x ou superior) - Necessário para construir e executar os contêineres.
+- **Terraform** (versão 1.x ou superior) Utilizado para definir e aplicar a infraestrutura como código.
+- **AWS CLI** (versão 2.x ou superior) Ferramenta de linha de comando para interagir com serviços da AWS.
+- É necessário configurar suas credenciais com `aws configure`.
+- **Python 3.10+** Para execução de scripts auxiliares e automação.
+- **Conta AWS ativa** - ID da conta AWS - Chaves de acesso (Access Key e Secret Key) - Permissão para criar buckets S3 e recursos necessários.
+
 Instalação e Uso
 -------------------
 1. Clonar o repositório:
