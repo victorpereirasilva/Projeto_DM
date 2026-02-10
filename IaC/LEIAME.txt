@@ -1,0 +1,24 @@
+# Instruções do Projeto
+
+# Edite os arquivos config.tf e terraform.tfvars, e coloque seu ID da AWS onde indicado (estará preenchido com o id 381492141074).
+
+# No script projeto.py adicione seu ID da AWS (estará preenchido com o id 381492141074) e suas chaves AWS onde indicado.
+
+# Crie manualmente o bucket S3 chamado: proj-dm-terraform-<id-aws>  (substitua <id-aws> pelo seu ID da AWS)
+
+# Execute:
+
+terraform init
+terraform apply
+
+# Acompanhe a execução do pipeline pela interface da AWS.
+
+# Fim!
+
+
+
+terraform plan -out dm.tfplan
+
+terraform graph
+
+http://webgraphviz.com
