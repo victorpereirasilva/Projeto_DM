@@ -54,7 +54,7 @@ aws configure
 
 9. Crie manualmente o bucket S3 chamado: proj-dm-terraform-<id-aws>  (substitua <id-aws> pelo seu ID da AWS)
 
-10. # Execute:
+10. Execute:
 
 terraform init
 terraform apply
