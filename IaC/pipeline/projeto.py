@@ -19,8 +19,8 @@ from p_ml import cria_modelos_ml
 NOME_BUCKET = "projeto-dm-381492141074"
 
 # Chaves de acesso à AWS
-AWSACCESSKEYID = ""
-AWSSECRETKEY = ""
+#AWSACCESSKEYID = ""
+#AWSSECRETKEY = ""
 
 print("\nLog Inicializando o Processamento.")
 
