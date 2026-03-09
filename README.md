@@ -343,14 +343,6 @@ Verifique seu e-mail e confirme a inscrição no tópico SNS para receber alerta
 
 Acesse o [Console AWS](https://console.aws.amazon.com) → CloudWatch Dashboard → `projeto-dm-pipeline-dashboard`.
 
----
-
-## 🔒 Segurança
-
-> ⚠️ O arquivo `terraform.tfvars` está no `.gitignore` e **nunca deve ser versionado** com valores reais.
-> ⚠️ As credenciais AWS são obtidas via `aws configure` ou IAM Role — **nunca insira chaves no código**.
-
----
 
 ## 👤 Autor
 
