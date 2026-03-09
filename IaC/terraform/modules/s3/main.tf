@@ -7,7 +7,7 @@ resource "aws_s3_bucket" "main_bucket" {
   bucket = var.name_bucket
 
   # Impede destruição acidental do bucket com dados
-  force_destroy = false
+  force_destroy = true
 
   tags = {
     Name    = var.name_bucket
