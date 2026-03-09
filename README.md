@@ -1,80 +1,181 @@
-Projeto_DM
-==========
+# 🚀 Projeto DM — Automação de Infraestrutura com Docker + Terraform + AWS
 
-Objetivo
------------
-Automatizar a criação e gerenciamento de ambientes utilizando Python, Docker e Infraestrutura como Código (IaC), garantindo reprodutibilidade, escalabilidade e facilidade de manutenção.
+![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-1.x-7B42BC?logo=terraform&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-20.x+-2496ED?logo=docker&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-Cloud-FF9900?logo=amazon-aws&logoColor=white)
+![Shell](https://img.shields.io/badge/Shell-Script-4EAA25?logo=gnu-bash&logoColor=white)
 
-Tecnologias Utilizadas
--------------------------
-- Python 3.10+ → Scripts principais e lógica de automação
-- Docker → Criação de imagens e contêineres
-- Terraform (HCL) → Definição de infraestrutura como código
-- Shell Scripts → Automação auxiliar
-- GitHub Actions → Integração contínua (CI/CD)
+## 📋 Sobre o Projeto
 
-Estrutura do Projeto
------------------------
+O **Projeto DM** automatiza a criação e o gerenciamento de ambientes cloud na AWS utilizando Python, Docker e Infraestrutura como Código (IaC) com Terraform. O objetivo é garantir **reprodutibilidade**, **escalabilidade** e **facilidade de manutenção** em pipelines de dados e infraestrutura.
+
+---
+
+## 🏗️ Arquitetura
+
+```
 Projeto_DM/
-├─ IaC/
+├── IaC/
+│   └── terraform/          # Configurações de infraestrutura (HCL)
+│       ├── config.tf        # Configurações do provider AWS
+│       ├── main.tf          # Recursos principais
+│       └── terraform.tfvars # Variáveis de ambiente (não versionar com dados sensíveis)
+├── Dockerfile               # Imagem com Terraform + AWS CLI + Python
+└── README.md
+```
 
-│  └─ terraform/        # Configurações de infraestrutura
+---
 
-├─ src/
+## 🛠️ Tecnologias Utilizadas
 
-│  └─ main.py           # Código principal em Python
+| Tecnologia | Versão | Finalidade |
+|---|---|---|
+| Python | 3.10+ | Scripts de automação e lógica principal |
+| Docker | 20.x+ | Ambiente isolado e reproduzível |
+| Terraform (HCL) | 1.x+ | Infraestrutura como Código na AWS |
+| AWS CLI | 2.x+ | Interação com serviços da AWS |
+| Shell Script | — | Automação auxiliar |
+| GitHub Actions | — | CI/CD |
 
-├─ Dockerfile           # Definição da imagem Docker
+---
 
-├─ README.md            # Documentação principal
+## ✅ Pré-requisitos
 
+Antes de iniciar, certifique-se de ter instalado:
 
-Pré-requisitos 
------------------------
+- [Docker](https://docs.docker.com/get-docker/) (versão 20.x ou superior)
+- Conta AWS ativa com permissões para criar recursos (S3, etc.)
+- Credenciais AWS: **Access Key** e **Secret Key**
 
-Antes de iniciar, verifique se você possui os seguintes itens instalados e configurados em sua máquina: 
-- **Docker** (versão 20.x ou superior) - Necessário para construir e executar os contêineres.
-- **Terraform** (versão 1.x ou superior) Utilizado para definir e aplicar a infraestrutura como código.
-- **AWS CLI** (versão 2.x ou superior) Ferramenta de linha de comando para interagir com serviços da AWS.
-- É necessário configurar suas credenciais com `aws configure`.
-- **Python 3.10+** Para execução de scripts auxiliares e automação.
-- **Conta AWS ativa** - ID da conta AWS - Chaves de acesso (Access Key e Secret Key) - Permissão para criar buckets S3 e recursos necessários.
+> ⚠️ **Não é necessário** instalar Terraform ou AWS CLI localmente — o Dockerfile já inclui ambos no container.
 
-Instalação e Uso
--------------------
-1. Clonar o repositório:
-   git clone https://github.com/victorpereirasilva/Projeto_DM.git
-   cd Projeto_DM
+---
 
-2. Abra o terminal ou prompt de comando e navegue até a pasta onde você colocou os arquivos do projeto (não use espaço ou acento em nome de pasta). Execute o comando abaixo para criar a imagem Docker:
+## 🚀 Instalação e Uso
 
-   docker build -t dm-terraform-image:p .
+### 1. Clone o repositório
 
-3. Execute o comando abaixo para criar o container Docker:
+```bash
+git clone https://github.com/victorpereirasilva/Projeto_DM.git
+cd Projeto_DM
+```
 
-   docker run -dit --name dm-p -v D:\PROJETO\Projeto_DM\IaC:/iac dm-terraform-image:p /bin/bash
+### 2. Build da imagem Docker
 
-4. Verifique as versões do Terraform e do AWS CLI com os comandos abaixo
+```bash
+docker build -t dm-terraform-image:p .
+```
 
-   terraform version
-   aws --version
+### 3. Execute o container
 
-5. Configure a chave da AWS com o seguinte comando no container docker:
-  
-   aws configure
+Substitua o caminho abaixo pelo caminho local da pasta `IaC` no seu sistema:
 
-6. Vá para a pasta iac e execute o terraform init
+**Linux/macOS:**
+```bash
+docker run -dit --name dm-p \
+  -v $(pwd)/IaC:/iac \
+  dm-terraform-image:p /bin/bash
+```
 
-7. Edite os arquivos config.tf e terraform.tfvars, e coloque seu ID da AWS onde indicado
+**Windows (PowerShell):**
+```powershell
+docker run -dit --name dm-p `
+  -v ${PWD}/IaC:/iac `
+  dm-terraform-image:p /bin/bash
+```
 
-8. No script projeto.py adicione seu ID da AWS e suas chaves AWS onde indicado
+### 4. Acesse o container
 
-9. Crie manualmente o bucket S3 chamado: proj-dm-terraform-<id-aws>  (substitua <id-aws> pelo seu ID da AWS)
+```bash
+docker exec -it dm-p /bin/bash
+```
 
-10. Execute:
+### 5. Verifique as versões instaladas
 
-   terraform init
-   terraform apply
+```bash
+terraform version
+aws --version
+```
 
-11. Acompanhe a execução do pipeline pela interface da AWS.
+### 6. Configure as credenciais AWS
 
+```bash
+aws configure
+```
+
+> Você precisará informar: `AWS Access Key ID`, `AWS Secret Access Key`, `Default region name` e `Default output format`.
+
+### 7. Prepare os arquivos de configuração
+
+Dentro da pasta `/iac`, edite os arquivos:
+
+- **`config.tf`** — Substitua o placeholder pelo seu AWS Account ID
+- **`terraform.tfvars`** — Preencha as variáveis necessárias
+
+> 🔒 **Segurança:** Nunca insira credenciais AWS diretamente no código. Utilize variáveis de ambiente ou o `aws configure`. Nunca suba `terraform.tfvars` com dados sensíveis para o repositório.
+
+### 8. Crie o bucket S3 de backend do Terraform
+
+Crie manualmente um bucket S3 com o nome:
+
+```
+proj-dm-terraform-<SEU_AWS_ACCOUNT_ID>
+```
+
+### 9. Inicialize e aplique o Terraform
+
+```bash
+cd /iac
+terraform init
+terraform plan   # Revise as mudanças antes de aplicar
+terraform apply
+```
+
+### 10. Acompanhe o pipeline
+
+Acesse o console da AWS e monitore os recursos criados pelo pipeline.
+
+---
+
+## 🔒 Boas Práticas de Segurança
+
+- ❌ Nunca commite arquivos `.tfvars` com valores reais
+- ❌ Nunca insira Access Keys ou Secret Keys diretamente em scripts Python ou arquivos de configuração
+- ✅ Use variáveis de ambiente (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) ou o `aws configure`
+- ✅ Adicione `*.tfvars` e `terraform.tfstate` ao `.gitignore`
+- ✅ Considere usar o [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/) para gerenciar segredos
+
+Exemplo de `.gitignore` recomendado:
+```
+*.tfvars
+*.tfstate
+*.tfstate.backup
+.terraform/
+.env
+```
+
+---
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Para contribuir:
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature: `git checkout -b feature/minha-feature`
+3. Commit suas mudanças: `git commit -m 'feat: adiciona minha feature'`
+4. Faça push para a branch: `git push origin feature/minha-feature`
+5. Abra um Pull Request
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+---
+
+## 👤 Autor
+
+**Victor Pereira Silva**  
+[![GitHub](https://img.shields.io/badge/GitHub-victorpereirasilva-181717?logo=github)](https://github.com/victorpereirasilva)
