@@ -1,0 +1,45 @@
+# Estado e cache do Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Valores de variáveis: contêm o Account ID e o e-mail de alertas
+terraform.tfvars
+*.auto.tfvars
+
+# Dados: o dataset é gerado por dados/gerar_dataset.py, não versionado
+IaC/terraform/dados/*.csv
+IaC/terraform/dados/processed/
+IaC/terraform/dados/curated/
+
+# Material de apoio (apresentação, runbook, plano de estudo) - uso local
+docs/
+
+# Credenciais
+.env
+*.pem
+*.key
+.aws/
+
+# Logs e artefatos de execução
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Sistema operacional e editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

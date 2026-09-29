@@ -1,0 +1,18 @@
+# Projeto DM - Dependências Python
+#
+# Requisito de reprodutibilidade: todos os scripts de configuração, instalação
+# e execução ficam no repositório. Este arquivo declara o que os scripts
+# auxiliares precisam para rodar em qualquer máquina.
+#
+# Instalação:
+#   pip3 install -r requirements.txt
+#
+# O Dockerfile já executa esta instalação ao construir a imagem.
+#
+# Observação sobre o cluster: os jobs que rodam no Amazon EMR e no AWS Glue
+# NÃO usam este arquivo. Lá o ambiente é preparado por scripts/bootstrap.sh
+# (EMR) e pelos argumentos --extra-py-files do job (Glue), e o PySpark já
+# acompanha o cluster.
+
+# SDK da AWS — usado pelo produtor Kinesis e pelo envio de logs ao S3
+boto3>=1.34,<2.0
