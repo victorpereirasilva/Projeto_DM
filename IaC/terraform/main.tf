@@ -44,6 +44,9 @@ module "emr" {
   # nenhuma porta administrativa fica exposta à internet.
   allowed_ssh_cidr = var.allowed_ssh_cidr
 
+  # Subnet do cluster. Vazio usa a VPC default da conta.
+  subnet_id = var.emr_subnet_id
+
   # Os scripts e os dados precisam estar no S3 antes do cluster subir e rodar o step
   depends_on = [module.s3]
 }
@@ -82,5 +85,19 @@ module "glue" {
   iam_role_arn = module.iam.glue_role_arn
 
   # Os scripts dos jobs precisam estar no S3 antes dos jobs serem criados
+  depends_on = [module.s3]
+}
+
+# Módulo de Consulta com Athena
+module "athena" {
+  source      = "./modules/athena"
+  name_bucket = var.name_bucket
+  kms_key_arn = module.kms.kms_key_arn
+
+  # As consultas salvas referenciam o banco catalogado pelo Glue
+  glue_db_name         = module.glue.database_name
+  bytes_scanned_cutoff = var.athena_bytes_scanned_cutoff
+
+  # O bucket precisa existir antes de ser apontado como local de resultado
   depends_on = [module.s3]
 }

@@ -118,6 +118,7 @@ flowchart LR
 | ETL Batch | AWS Glue + PySpark | Serverless, integrado ao S3 e Athena, sem gestão de servidores |
 | Processamento ML | Amazon EMR + Spark | Processamento distribuído com Managed Scaling |
 | Catálogo de Dados | AWS Glue Data Catalog | Descoberta automática de schema, integrado ao Athena |
+| Consulta | Amazon Athena | Consulta o S3 sem mover dado, cobrança por varredura |
 | Criptografia | AWS KMS | Rotação automática de chaves, conformidade com LGPD |
 | Controle de Acesso | AWS IAM | Uma role por serviço, com permissões próprias |
 | Monitoramento | AWS CloudWatch | Logs, métricas, alarmes e dashboard centralizados |
@@ -137,6 +138,7 @@ Projeto_DM/
     ├── config.tf                       # Backend S3 + provider AWS
     ├── main.tf                         # Orquestra todos os módulos
     ├── variables.tf                    # Declaração de variáveis
+    ├── outputs.tf                      # Valores usados na operação após o apply
     ├── terraform.tfvars.example        # Modelo de variáveis (copie para .tfvars)
     │
     ├── modules/
@@ -146,6 +148,7 @@ Projeto_DM/
     │   ├── kinesis/                    # Ingestão em tempo real (Streams + Firehose)
     │   ├── emr/                        # Cluster Spark com Managed Scaling
     │   ├── glue/                       # ETL + Data Catalog + Workflow
+    │   ├── athena/                     # Workgroup de consulta + queries salvas
     │   └── monitoring/                 # CloudWatch + CloudTrail + SNS
     │
     ├── pipeline/                       # Scripts Python enviados ao S3
@@ -264,6 +267,8 @@ O mapa `COLUNAS_SENSIVEIS`, em `p_processamento.py`, declara qual técnica se ap
 
 O **Glue Data Catalog** cataloga o schema das três camadas por meio de crawlers agendados (RAW às 02:00, PROCESSED às 04:00, CURATED às 06:00 UTC). O **Athena** consulta os dados diretamente no S3, sem movimentação.
 
+O Athena entra pelo Terraform como um **workgroup próprio**, e não pelo `primary` padrão, por três motivos práticos: o local de resultado das consultas fica declarado em código (sem ele, a primeira consulta falha pedindo um bucket de saída — um passo manual fora do IaC); o resultado é criptografado com a mesma chave KMS do Data Lake, que de outro modo sairia em claro no S3; e `bytes_scanned_cutoff_per_query` impõe um teto de varredura por consulta, já que o Athena cobra por dado lido e um `SELECT *` sem filtro de partição é uma fatura, não um erro. Três consultas ficam salvas no workgroup, incluindo uma que lê a camada PROCESSED e evidencia o mascaramento.
+
 O Glue Workflow encadeia os jobs: ETL às 03:00 UTC → curadoria, disparada por condição após o ETL concluir com sucesso.
 
 **Particionamento.** As camadas PROCESSED e CURATED são particionadas por `ano/mes`, derivados da data do atendimento. A escolha de mês, e não de dia, é deliberada: com a volumetria atual, o particionamento diário produziria centenas de arquivos pequenos e degradaria a leitura — o clássico problema de *small files*. Com volume dez vezes maior, a partição diária passa a compensar, e a mudança é de uma linha.
@@ -282,6 +287,7 @@ O ambiente completo é reconstruído em qualquer máquina a partir do repositór
 | Geração dos dados | `dados/gerar_dataset.py`, com semente fixa |
 | Scripts de execução do pipeline | `pipeline/` |
 | Instruções de execução | Seção **Como Executar** abaixo |
+| Valores de operação após o apply | `outputs.tf` — nomes, IDs e workgroup, sem procurar no console |
 
 O que **não** é versionado, por decisão: `terraform.tfvars` (contém o Account ID e o e-mail de alertas), o `tfstate` e o `dataset.csv` — este último é reproduzido pelo gerador, com semente fixa, em vez de carregado no Git.
 
@@ -365,8 +371,9 @@ O projeto se apoia em três princípios:
 ### Pré-requisitos
 
 - [Docker](https://docs.docker.com/get-docker/) instalado
-- Conta AWS com permissões para S3, EMR, Glue, Kinesis, CloudWatch, KMS e IAM
+- Conta AWS com permissões para S3, EMR, Glue, Kinesis, Athena, CloudWatch, KMS e IAM
 - AWS Account ID disponível
+- Uma VPC com subnet disponível na região `us-east-2`. Se a conta tiver a VPC default, nada a fazer; se não tiver — o caso de contas com baseline corporativo — informe uma subnet em `emr_subnet_id`, no passo 2
 
 ### Passo a passo
 
@@ -381,14 +388,31 @@ cd Projeto_DM
 cp IaC/terraform/terraform.tfvars.example IaC/terraform/terraform.tfvars
 ```
 
-Edite `terraform.tfvars` substituindo `SEU_ACCOUNT_ID` pelo seu Account ID real:
+Edite `terraform.tfvars`. O arquivo já vem com todos os valores preenchidos; o que precisa de ajuste são as três primeiras linhas:
+
 ```hcl
-name_bucket = "projeto-dm-123456789012"
-name_emr    = "projeto-dm-emr-123456789012"
-alarm_email = "seu@email.com"
+name_bucket       = "projeto-dm-123456789012"     # troque pelo seu Account ID
+name_emr          = "projeto-dm-emr-123456789012" # idem
+alarm_email       = "seu@email.com"               # recebe os alertas do SNS
+
+versioning_bucket = "Enabled"
+files_bucket      = "./pipeline"
+files_data        = "./dados"
+files_bash        = "./scripts"
+glue_db_name      = "projeto_dm_catalog"
+
+emr_master_instance_type = "m5.xlarge"
+emr_core_instance_type   = "m5.xlarge"
+emr_core_instance_count  = 2
+emr_max_capacity_units   = 10
+
+emr_subnet_id               = ""            # vazio usa a VPC default da conta
+athena_bytes_scanned_cutoff = 10737418240   # teto de 10 GB por consulta
+allowed_ssh_cidr            = ""            # vazio não abre porta alguma
 ```
 
-Edite também `IaC/terraform/config.tf`:
+Edite também `IaC/terraform/config.tf`, que é o único lugar onde o valor não pode vir de variável — o backend do Terraform é avaliado antes das variáveis existirem:
+
 ```hcl
 bucket = "proj-dm-terraform-123456789012"
 ```
@@ -425,6 +449,8 @@ aws configure
 aws s3 mb s3://proj-dm-terraform-SEU_ACCOUNT_ID --region us-east-2
 ```
 
+Este é o único recurso criado fora do Terraform, e por um motivo: é o bucket que guarda o próprio estado. Provisioná-lo pela configuração que o utiliza é o problema do ovo e da galinha.
+
 **7. Gere o dataset**
 
 O dataset não é versionado; é gerado a partir da regra em `dados/gerar_dataset.py`.
@@ -435,6 +461,8 @@ python3 gerar_dataset.py --linhas 90000
 
 Para testar a escalabilidade com volume maior, use `--linhas 5000000`.
 
+Gerar **antes** do `apply` não é detalhe de ordem: o upload do CSV é um `aws_s3_object` com `fileset()`, resolvido em tempo de plan. Sem o arquivo no disco, o Terraform não reclama — simplesmente não sobe dado nenhum, e o ETL roda sobre uma camada RAW vazia.
+
 **8. Inicialize e aplique a infraestrutura**
 ```bash
 cd /iac/terraform
@@ -444,22 +472,97 @@ terraform plan
 terraform apply
 ```
 
+O `apply` cria cerca de 70 recursos e termina imprimindo os valores usados nos passos seguintes — nome do bucket, ID do cluster, workflow do Glue, banco do Data Catalog e workgroup do Athena:
+
+```bash
+terraform output
+```
+
 **9. Confirme a inscrição SNS**
 
-Verifique seu e-mail e confirme a inscrição no tópico SNS para receber os alertas.
+Verifique seu e-mail e confirme a inscrição no tópico SNS. Sem essa confirmação os alarmes disparam e a notificação não chega a ninguém.
 
-**10. Publique eventos em tempo real (opcional)**
+**10. Dispare o pipeline agora**
+
+Os triggers do Glue são agendados (crawler RAW às 02:00, ETL às 03:00, curadoria por condição, crawlers PROCESSED e CURATED às 04:00 e 06:00 UTC). Para demonstrar sem esperar o horário, dispare à mão, nesta ordem:
+
+```bash
+# 1. Cataloga a camada RAW
+aws glue start-crawler --name projeto-dm-raw-crawler
+
+# 2. Executa o ETL (RAW -> PROCESSED, com mascaramento) e, na sequência,
+#    a curadoria — o workflow encadeia os dois
+aws glue start-workflow-run --name projeto-dm-pipeline-workflow
+
+# 3. Acompanhe até concluir
+aws glue get-workflow-runs --name projeto-dm-pipeline-workflow \
+  --query "Runs[0].{Status:Status,Stats:Statistics}"
+
+# 4. Cataloga o que foi produzido
+aws glue start-crawler --name projeto-dm-processed-crawler
+aws glue start-crawler --name projeto-dm-curated-crawler
+```
+
+O cluster EMR, por sua vez, roda o step de ML sozinho ao subir — não precisa de disparo. O andamento fica em:
+
+```bash
+aws emr list-steps --cluster-id $(terraform output -raw emr_cluster_id) \
+  --query "Steps[].{Name:Name,State:Status.State}"
+```
+
+**11. Consulte o resultado no Athena**
+
+Console AWS → Athena → selecione o workgroup **`projeto-dm-<account-id>-workgroup`** (não o `primary`). O workgroup já vem com o local de resultado configurado e criptografado — sem ele, a primeira consulta falharia pedindo um bucket de saída.
+
+Três consultas prontas estão salvas em **Saved queries**:
+
+| Consulta | O que mostra |
+|---|---|
+| `projeto-dm-amostra-mascarada` | A camada PROCESSED com CPF, nome e telefone mascarados — a prova de que o mascaramento aconteceu, vista pelo consumidor do dado |
+| `projeto-dm-taxa-faltas-por-unidade` | O indicador de negócio: taxa de faltas por unidade de saúde |
+| `projeto-dm-metricas-modelos` | As métricas dos modelos, com a linha de base ao lado para comparação |
+
+Ou pela linha de comando:
+```bash
+aws athena start-query-execution \
+  --work-group "$(terraform output -raw athena_workgroup)" \
+  --query-execution-context Database="$(terraform output -raw glue_database)" \
+  --query-string "SELECT modelo, acuracia, auc FROM metrics ORDER BY auc DESC"
+```
+
+Os nomes das tabelas (`atendimentos`, `faltas`, `metrics`) são inferidos pelos crawlers a partir dos prefixos do S3. Se algum divergir, o Data Catalog mostra o nome real.
+
+**12. Publique eventos em tempo real (opcional)**
 ```bash
 cd /iac/terraform/pipeline
 export NOME_BUCKET=projeto-dm-SEU_ACCOUNT_ID
 python3 kinesis_producer.py --eventos 500 --intervalo 0.2
 ```
 
-Em cerca de um minuto os eventos aparecem em `s3://SEU_BUCKET/raw/streaming/`.
+Em cerca de um minuto os eventos aparecem em `s3://SEU_BUCKET/raw/streaming/` — o buffer do Firehose fecha a cada 5 MB ou 60 segundos, o que vier primeiro.
 
-**11. Acompanhe o pipeline**
+**13. Acompanhe o pipeline**
 
 Console AWS → CloudWatch → Dashboards → `projeto-dm-pipeline-dashboard`.
+
+Vale conferir também **CloudWatch → Alarms**: um alarme em `INSUFFICIENT_DATA` permanente é um alarme que nunca vai disparar, e esse é o momento de descobrir.
+
+**14. Derrube o ambiente**
+
+O EMR é o recurso caro, e o cluster tem `auto_termination_policy` com ociosidade de 1 hora — ele se encerra sozinho depois do job. O resto continua cobrando armazenamento, então ao terminar:
+
+```bash
+cd /iac/terraform
+terraform destroy
+```
+
+O bucket do Data Lake tem `force_destroy = true` e sai com os objetos dentro. Ficam de fora do `destroy`, porque não foram criados pelo Terraform: o bucket de estado do passo 6 e o próprio `tfstate`.
+
+```bash
+aws s3 rb s3://proj-dm-terraform-SEU_ACCOUNT_ID --force
+```
+
+A chave KMS entra em exclusão programada — `deletion_window_in_days = 7` no módulo. Ela não é apagada na hora: fica 7 dias pendente e pode ser cancelada nesse intervalo.
 
 ---
 

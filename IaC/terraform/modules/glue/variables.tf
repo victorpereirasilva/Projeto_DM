@@ -2,7 +2,7 @@
 
 variable "name_bucket" {
   type        = string
-  description = "Nome do bucket principal do projeto"
+  description = "Nome do bucket do Data Lake lido e gravado pelos jobs e crawlers"
 }
 
 variable "glue_db_name" {
@@ -13,5 +13,5 @@ variable "glue_db_name" {
 
 variable "iam_role_arn" {
   type        = string
-  description = "ARN da role IAM do Glue com permissões de acesso ao S3"
+  description = "ARN da role assumida pelos jobs e crawlers do Glue"
 }

@@ -6,7 +6,10 @@ resource "aws_s3_bucket" "main_bucket" {
   # Nome do bucket
   bucket = var.name_bucket
 
-  # Impede destruição acidental do bucket com dados
+  # Permite que o terraform destroy remova o bucket mesmo com objetos dentro.
+  # É adequado para um ambiente de case, onde derrubar tudo ao final é parte
+  # do fluxo; em produção o valor seria false, justamente para que um destroy
+  # distraído não leve o Data Lake com ele.
   force_destroy = true
 
   tags = {
@@ -112,6 +115,23 @@ resource "aws_s3_bucket_lifecycle_configuration" "main_bucket_lifecycle" {
 
     expiration {
       days = 30
+    }
+  }
+
+  # Resultados de consulta do Athena: expiram em 7 dias.
+  # São subprodutos descartáveis — cada consulta grava um CSV novo, e sem
+  # expiração esse prefixo cresce indefinidamente pagando armazenamento por
+  # resultado que ninguém vai reler.
+  rule {
+    id     = "athena-results-lifecycle"
+    status = "Enabled"
+
+    filter {
+      prefix = "athena-results/"
+    }
+
+    expiration {
+      days = 7
     }
   }
 }

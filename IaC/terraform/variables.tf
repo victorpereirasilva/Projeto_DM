@@ -74,6 +74,26 @@ variable "emr_max_capacity_units" {
 }
 
 # -------------------------------------------------------------------
+# REDE DO CLUSTER
+# -------------------------------------------------------------------
+
+variable "emr_subnet_id" {
+  type        = string
+  description = "Subnet onde o cluster EMR sobe (ex.: subnet-0a1b2c3d). Vazio, o padrão, usa a VPC default da conta — informe uma subnet se a conta não tiver VPC default."
+  default     = ""
+}
+
+# -------------------------------------------------------------------
+# CONSULTA
+# -------------------------------------------------------------------
+
+variable "athena_bytes_scanned_cutoff" {
+  type        = number
+  description = "Teto de bytes varridos por consulta no Athena. Protege contra um SELECT * sem filtro de partição."
+  default     = 10737418240
+}
+
+# -------------------------------------------------------------------
 # SEGURANÇA
 # -------------------------------------------------------------------
 

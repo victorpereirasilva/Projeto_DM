@@ -1,5 +1,33 @@
 # Módulo de Processamento - Amazon EMR
 
+# -------------------------------------------------------------------
+# REDE
+# O cluster precisa de uma subnet, e os security groups precisam estar na
+# mesma VPC dessa subnet. Duas situações são atendidas:
+#
+#   subnet_id informado  -> usa essa subnet e descobre a VPC a partir dela
+#   subnet_id vazio      -> usa a VPC default da conta (comportamento padrão)
+#
+# Sem o primeiro caso, o módulo só funcionaria em contas que ainda têm a VPC
+# default — contas criadas com baseline corporativo normalmente não têm, e a
+# falha aparece como um erro de rede do EMR no meio do apply, difícil de
+# relacionar à causa.
+# -------------------------------------------------------------------
+
+data "aws_subnet" "selecionada" {
+  count = var.subnet_id == "" ? 0 : 1
+  id    = var.subnet_id
+}
+
+data "aws_vpc" "default" {
+  count   = var.subnet_id == "" ? 1 : 0
+  default = true
+}
+
+locals {
+  vpc_id = var.subnet_id == "" ? data.aws_vpc.default[0].id : data.aws_subnet.selecionada[0].vpc_id
+}
+
 # Cluster EMR com PySpark para processamento distribuído de Machine Learning
 resource "aws_emr_cluster" "emr_cluster" {
 
@@ -22,6 +50,10 @@ resource "aws_emr_cluster" "emr_cluster" {
     instance_profile                  = var.instance_profile
     emr_managed_master_security_group = aws_security_group.emr_main_sg.id
     emr_managed_slave_security_group  = aws_security_group.emr_core_sg.id
+
+    # Subnet explícita quando informada; null deixa o EMR escolher uma
+    # subnet da VPC default
+    subnet_id = var.subnet_id == "" ? null : var.subnet_id
   }
 
   # Configuração do nó principal
@@ -123,6 +155,9 @@ resource "aws_security_group" "emr_main_sg" {
   # Nome do grupo de segurança
   name = "${var.name_emr}-main-sg"
 
+  # Mesma VPC da subnet do cluster
+  vpc_id = local.vpc_id
+
   # Descrição
   description = "Allow inbound traffic for EMR main node."
 
@@ -158,6 +193,9 @@ resource "aws_security_group" "emr_core_sg" {
 
   # Nome do grupo de segurança
   name = "${var.name_emr}-core-sg"
+
+  # Mesma VPC da subnet do cluster
+  vpc_id = local.vpc_id
 
   # Descrição
   description = "Allow inbound outbound traffic for EMR core nodes."

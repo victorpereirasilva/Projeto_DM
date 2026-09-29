@@ -56,6 +56,12 @@ variable "max_capacity_units" {
   default     = 10
 }
 
+variable "subnet_id" {
+  type        = string
+  description = "Subnet onde o cluster sobe. Vazio usa a VPC default da conta."
+  default     = ""
+}
+
 variable "allowed_ssh_cidr" {
   type        = string
   description = "CIDR autorizado a abrir SSH no nó principal do EMR (ex.: 203.0.113.4/32). Vazio, o padrão, não cria nenhuma regra de entrada."

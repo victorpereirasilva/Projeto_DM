@@ -16,6 +16,17 @@ emr_core_instance_type   = "m5.xlarge"
 emr_core_instance_count  = 2
 emr_max_capacity_units   = 10
 
+# Rede do cluster EMR.
+# Vazio usa a VPC default da conta. Se a conta não tiver VPC default — o caso
+# de contas com baseline corporativo — informe uma subnet existente aqui.
+#   aws ec2 describe-subnets --query "Subnets[].[SubnetId,VpcId,AvailabilityZone]" --output table
+emr_subnet_id = ""
+
+# Consulta: teto de bytes varridos por consulta no Athena (padrão 10 GB).
+# O Athena cobra por varredura, e um SELECT * sem filtro de partição em uma
+# tabela grande é uma fatura inesperada. A consulta é abortada, não cobrada.
+athena_bytes_scanned_cutoff = 10737418240
+
 # Segurança: origem autorizada a abrir SSH no EMR.
 # Deixe vazio para não expor porta administrativa alguma (recomendado).
 # Para acesso pontual, informe o SEU IP com máscara /32 — nunca 0.0.0.0/0.
