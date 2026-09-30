@@ -6,6 +6,7 @@
 
 # Imports
 import os
+import sys
 import boto3
 import traceback
 from pyspark.sql import SparkSession
@@ -13,9 +14,24 @@ from p_log import grava_log
 from p_processamento import limpa_transforma_dados
 from p_ml import cria_modelos_ml
 
-# Nome do Bucket
-# ATENÇÃO: substitua pelo nome real do seu bucket (sem credenciais no código)
-NOME_BUCKET = os.environ.get("NOME_BUCKET", "projeto-dm-SEU_ACCOUNT_ID")
+# Nome do bucket.
+#
+# Vem do step do EMR como primeiro argumento do script — o Terraform o passa a
+# partir de var.name_bucket, de modo que o nome tem uma origem única. Fora do
+# cluster, a variável de ambiente NOME_BUCKET atende.
+#
+# Não existe valor padrão de propósito. Um padrão com o nome do bucket escrito
+# no código faria o job apontar para um bucket inexistente sempre que o nome
+# real divergisse, quebrando no primeiro log com um erro de S3 que não diz qual
+# é a causa. Melhor falhar aqui, explicando.
+NOME_BUCKET = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("NOME_BUCKET")
+
+if not NOME_BUCKET:
+    raise SystemExit(
+        "Nome do bucket nao informado.\n"
+        "  No EMR: o step passa o nome como argumento do script.\n"
+        "  Localmente: export NOME_BUCKET=projeto-dm-<account-id>"
+    )
 
 print("\nLog Inicializando o Processamento.")
 

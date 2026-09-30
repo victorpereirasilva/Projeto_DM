@@ -1,0 +1,16 @@
+# Configuração parcial do backend do Terraform.
+#
+# Copie para backend.hcl e troque SEU_ACCOUNT_ID pelo ID real da sua conta:
+#
+#   cp backend.hcl.example backend.hcl
+#   terraform init -backend-config=backend.hcl
+#
+# O backend.hcl fica no .gitignore. O motivo é o mesmo do terraform.tfvars:
+# o nome do bucket carrega o Account ID, e o repositório é público.
+#
+# Este é um bucket diferente do Data Lake — guarda apenas o tfstate — e precisa
+# existir antes do init:
+#
+#   aws s3 mb s3://proj-dm-terraform-SEU_ACCOUNT_ID --region us-east-2
+
+bucket = "proj-dm-terraform-SEU_ACCOUNT_ID"

@@ -32,7 +32,7 @@ locals {
 resource "aws_emr_cluster" "emr_cluster" {
 
   # Nome do cluster
-  name          = var.name_emr
+  name = var.name_emr
 
   # Versão do EMR com suporte ao Spark
   release_label = "emr-6.15.0"
@@ -70,21 +70,6 @@ resource "aws_emr_cluster" "emr_cluster" {
     # Quantidade inicial de nós workers — o EMR Managed Scaling ajusta
     # esse número automaticamente conforme a carga do YARN
     instance_count = var.core_instance_count
-  }
-
-  # ESCALABILIDADE HORIZONTAL
-  # O EMR Managed Scaling adiciona e remove nós sozinho, com base na
-  # demanda de memória e contêineres pendentes no YARN. É o que permite
-  # rodar a mesma stack com 90 mil ou 90 milhões de registros sem
-  # alterar uma linha de código.
-  managed_scaling_policy {
-    compute_limits {
-      unit_type                       = "Instances"
-      minimum_capacity_units          = var.min_capacity_units
-      maximum_capacity_units          = var.max_capacity_units
-      maximum_core_capacity_units     = var.max_capacity_units
-      maximum_ondemand_capacity_units = var.max_capacity_units
-    }
   }
 
   # Role de serviço do EMR
@@ -134,7 +119,12 @@ resource "aws_emr_cluster" "emr_cluster" {
           "s3://${var.name_bucket}/pipeline/p_ml.py"
         ]),
 
-        "s3://${var.name_bucket}/pipeline/projeto.py"
+        "s3://${var.name_bucket}/pipeline/projeto.py",
+
+        # Nome do bucket como argumento do script. É o que evita um valor
+        # hardcoded dentro do Python: o nome tem origem única, em
+        # var.name_bucket, e quem clona o repositório não edita código.
+        var.name_bucket
       ]
     }
   }
@@ -142,6 +132,37 @@ resource "aws_emr_cluster" "emr_cluster" {
   tags = {
     Name    = var.name_emr
     Project = "projeto-dm"
+  }
+}
+
+# -------------------------------------------------------------------
+# ESCALABILIDADE HORIZONTAL
+#
+# O EMR Managed Scaling adiciona e remove nós sozinho, com base na demanda
+# de memória e contêineres pendentes no YARN. É o que permite rodar a mesma
+# stack com 90 mil ou 90 milhões de registros sem alterar uma linha de código.
+#
+# Atenção ao formato: no provider AWS isto NÃO é um bloco dentro do
+# aws_emr_cluster — é um resource próprio, aws_emr_managed_scaling_policy,
+# ligado ao cluster pelo cluster_id. Escrito como bloco, o terraform validate
+# recusa com "Blocks of type managed_scaling_policy are not expected here".
+#
+# Managed Scaling e autoscaling_policy nos instance groups são mutuamente
+# exclusivos: usar os dois faz o cluster falhar na criação.
+# -------------------------------------------------------------------
+
+resource "aws_emr_managed_scaling_policy" "emr_scaling" {
+  cluster_id = aws_emr_cluster.emr_cluster.id
+
+  compute_limits {
+    unit_type              = "Instances"
+    minimum_capacity_units = var.min_capacity_units
+    maximum_capacity_units = var.max_capacity_units
+
+    # Todo o cluster é on-demand: sem nós Spot, o teto on-demand é o teto total.
+    # Usar Spot nos nós de tarefa está em melhorias futuras e reduziria este valor.
+    maximum_ondemand_capacity_units = var.max_capacity_units
+    maximum_core_capacity_units     = var.max_capacity_units
   }
 }
 

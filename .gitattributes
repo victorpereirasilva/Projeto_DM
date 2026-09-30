@@ -1,0 +1,17 @@
+# Normaliza o fim de linha no repositório.
+#
+# Sem isto, um clone no Windows reescreve os arquivos com CRLF e o `git status`
+# acusa o repositório inteiro como modificado — o diff do commit fica ilegível,
+# com todas as linhas de todos os arquivos trocadas por nada.
+#
+# `text=auto eol=lf` guarda sempre LF no repositório, independentemente do
+# sistema onde se edita. Os arquivos que rodam dentro do container Linux
+# dependem disso: um script .sh com CRLF falha com "bad interpreter".
+* text=auto eol=lf
+
+# Binários: nunca converter
+*.png binary
+*.jpg binary
+*.pdf binary
+*.pptx binary
+*.mp3 binary

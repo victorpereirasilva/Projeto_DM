@@ -12,13 +12,22 @@ terraform {
     }
   }
 
-  # Backend do estado remoto.
-  # Este bucket deve ser criado manualmente antes do terraform init —
-  # é o problema clássico do ovo e da galinha: o backend não pode ser
-  # provisionado pela mesma configuração que o utiliza.
+  # Backend do estado remoto — configuração parcial.
+  #
+  # O bucket deve ser criado manualmente antes do terraform init: é o problema
+  # clássico do ovo e da galinha, já que o backend não pode ser provisionado
+  # pela mesma configuração que o utiliza.
+  #
+  # O nome do bucket NÃO fica aqui. Ele carrega o Account ID, e este arquivo é
+  # versionado num repositório público. O bloco backend não aceita variáveis —
+  # é avaliado antes de as variáveis existirem —, então a saída é a configuração
+  # parcial: o que falta vem de um arquivo à parte, fora do Git.
+  #
+  #   cp backend.hcl.example backend.hcl   # e preencha o bucket
+  #   terraform init -backend-config=backend.hcl
+  #
   backend "s3" {
     encrypt = true
-    bucket  = "proj-dm-terraform-SEU_ACCOUNT_ID"
     key     = "projeto-dm.tfstate"
     region  = "us-east-2"
 

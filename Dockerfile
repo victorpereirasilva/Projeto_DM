@@ -11,6 +11,12 @@ LABEL description="Ambiente para provisionar e operar o Data Lake do Projeto DM"
 # Evita prompts interativos durante a instalação de pacotes
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Desliga o pager do AWS CLI v2.
+# Por padrão ele manda a saída para o `less`, que não existe numa imagem
+# enxuta — e o comando falha na exibição, com um erro que parece de
+# credencial e não é. Em uso não interativo o pager não serve para nada.
+ENV AWS_PAGER=""
+
 # Atualiza os pacotes do sistema e instala as dependências necessárias.
 # python3 está incluído para permitir gerar o dataset dentro do container,
 # sem exigir Python instalado na máquina do usuário.

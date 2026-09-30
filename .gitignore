@@ -3,6 +3,7 @@
 *.tfstate
 *.tfstate.*
 *.tfplan
+tfplan
 crash.log
 crash.*.log
 override.tf
@@ -13,6 +14,9 @@ override.tf.json
 # Valores de variáveis: contêm o Account ID e o e-mail de alertas
 terraform.tfvars
 *.auto.tfvars
+
+# Configuração do backend: contém o nome do bucket de estado, com o Account ID
+backend.hcl
 
 # Dados: o dataset é gerado por dados/gerar_dataset.py, não versionado
 IaC/terraform/dados/*.csv

@@ -14,6 +14,7 @@ from pyspark.ml.feature import (
 from pyspark.sql.functions import (
     col,
     current_date,
+    lit,
     month,
     sum as spark_sum,
     to_date,
@@ -189,7 +190,7 @@ def _monta_pipeline_atributos(df):
 # -------------------------------------------------------------------
 
 def le_camada_raw(spark, caminho_raw, bucket=None):
-    """Lê o CSV bruto da camada RAW."""
+    """Lê o CSV bruto da sub-camada de lote da RAW."""
 
     grava_log("Log - Importando os dados da camada RAW: " + caminho_raw, bucket)
 
@@ -201,6 +202,70 @@ def le_camada_raw(spark, caminho_raw, bucket=None):
     )
 
     grava_log("Log - Total de registros lidos: " + str(df.count()), bucket)
+
+    return df
+
+
+def le_camada_streaming(spark, caminho_streaming, colunas, bucket=None):
+    """Lê os eventos entregues pelo Firehose e os alinha ao schema do lote.
+
+    As duas vias de ingestão gravam em formatos diferentes: o lote em CSV, o
+    streaming em JSON Lines comprimido. Para que a convergência seja real, e
+    não apenas um destino comum no S3, o streaming é lido aqui e convertido
+    para o mesmo schema textual do CSV. A tipagem acontece depois, uma única
+    vez, sobre os dois caminhos já unidos.
+
+    Colunas que o evento não trouxer entram nulas, e colunas a mais são
+    descartadas: o contrato de dados é o da camada de lote.
+
+    Devolve None quando ainda não existe evento algum. Ausência de streaming
+    não é erro — é o estado normal de uma execução que só teve carga em lote.
+    """
+
+    grava_log("Log - Procurando eventos na sub-camada de streaming da RAW.", bucket)
+
+    try:
+        df = spark.read.json(caminho_streaming)
+    except Exception as erro:
+        grava_log(f"Log - Sem dados de streaming para unir ({erro}).", bucket)
+        return None
+
+    if not df.columns:
+        grava_log("Log - Sub-camada de streaming vazia.", bucket)
+        return None
+
+    for coluna in colunas:
+        if coluna not in df.columns:
+            df = df.withColumn(coluna, lit(None))
+
+    df = df.select([col(c).cast("string").alias(c) for c in colunas])
+
+    grava_log("Log - Eventos de streaming lidos: " + str(df.count()), bucket)
+
+    return df
+
+
+def le_camada_raw_unificada(spark, caminho_batch, caminho_streaming, bucket=None):
+    """Une as duas vias de ingestão num único DataFrame.
+
+    É aqui que a arquitetura Lambda se fecha. A partir deste ponto existe um
+    caminho de tratamento só — mascaramento, limpeza, tipagem e particionamento
+    —, aplicado sobre lote e streaming sem distinção.
+    """
+
+    df = le_camada_raw(spark, caminho_batch, bucket)
+
+    if not caminho_streaming:
+        return df
+
+    df_streaming = le_camada_streaming(spark, caminho_streaming, df.columns, bucket)
+
+    if df_streaming is None:
+        return df
+
+    df = df.unionByName(df_streaming)
+
+    grava_log("Log - Total apos unir lote e streaming: " + str(df.count()), bucket)
 
     return df
 
@@ -292,8 +357,13 @@ def limpa_transforma_dados(spark, bucket, nome_bucket, ambiente_execucao_EMR):
                       pronto para o treinamento em p_ml.py
     """
 
-    # Caminho da sub-camada de lote da RAW (a via de streaming grava em raw/streaming/)
-    path_raw = f"s3://{nome_bucket}/raw/batch/" if ambiente_execucao_EMR else "dados/"
+    # As duas sub-camadas da RAW. Localmente só existe o lote.
+    path_batch = (
+        f"s3://{nome_bucket}/raw/batch/" if ambiente_execucao_EMR else "dados/dataset.csv"
+    )
+    path_streaming = (
+        f"s3://{nome_bucket}/raw/streaming/" if ambiente_execucao_EMR else None
+    )
 
     path_processed = (
         f"s3://{nome_bucket}/processed/atendimentos/"
@@ -302,7 +372,7 @@ def limpa_transforma_dados(spark, bucket, nome_bucket, ambiente_execucao_EMR):
     )
 
     # Leitura e transformação — mesmo código executado pelo job do Glue
-    df = le_camada_raw(spark, path_raw + "dataset.csv", bucket)
+    df = le_camada_raw_unificada(spark, path_batch, path_streaming, bucket)
     df = transforma_raw_para_processed(spark, df, bucket)
 
     grava_log("Log - Verificando o balanceamento de classes.", bucket)

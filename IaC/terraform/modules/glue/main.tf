@@ -144,6 +144,11 @@ resource "aws_glue_job" "etl_job" {
     "--TempDir"                          = "s3://${var.name_bucket}/logs/glue-temp/"
     "--SOURCE_BUCKET"                    = var.name_bucket
     "--SOURCE_PREFIX"                    = "raw/batch/"
+
+    # Sub-camada de streaming. O job une as duas vias antes de transformar,
+    # que é o que torna a convergência da arquitetura Lambda real e não apenas
+    # um destino comum no S3.
+    "--STREAM_PREFIX" = "raw/streaming/"
     "--TARGET_PREFIX"                    = "processed/"
 
     # Módulos do projeto importados pelo script.

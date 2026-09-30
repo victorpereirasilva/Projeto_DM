@@ -24,7 +24,7 @@ from pyspark.context import SparkContext
 from p_log import grava_log
 from p_processamento import (
     grava_camada_processed,
-    le_camada_raw,
+    le_camada_raw_unificada,
     transforma_raw_para_processed,
 )
 
@@ -35,11 +35,12 @@ from p_processamento import (
 
 args = getResolvedOptions(
     sys.argv,
-    ["JOB_NAME", "SOURCE_BUCKET", "SOURCE_PREFIX", "TARGET_PREFIX"],
+    ["JOB_NAME", "SOURCE_BUCKET", "SOURCE_PREFIX", "STREAM_PREFIX", "TARGET_PREFIX"],
 )
 
 NOME_BUCKET = args["SOURCE_BUCKET"]
 PREFIXO_ORIGEM = args["SOURCE_PREFIX"]
+PREFIXO_STREAMING = args["STREAM_PREFIX"]
 PREFIXO_DESTINO = args["TARGET_PREFIX"]
 
 # -------------------------------------------------------------------
@@ -56,15 +57,16 @@ job.init(args["JOB_NAME"], args)
 bucket = boto3.resource("s3").Bucket(NOME_BUCKET)
 
 caminho_origem = f"s3://{NOME_BUCKET}/{PREFIXO_ORIGEM}"
+caminho_streaming = f"s3://{NOME_BUCKET}/{PREFIXO_STREAMING}"
 caminho_destino = f"s3://{NOME_BUCKET}/{PREFIXO_DESTINO}atendimentos/"
 
-grava_log(f"Log - Glue ETL iniciado. Origem: {caminho_origem}", bucket)
+grava_log(f"Log - Glue ETL iniciado. Lote: {caminho_origem}", bucket)
 
 # -------------------------------------------------------------------
 # EXECUÇÃO — leitura, transformação e gravação
 # -------------------------------------------------------------------
 
-df = le_camada_raw(spark, caminho_origem, bucket)
+df = le_camada_raw_unificada(spark, caminho_origem, caminho_streaming, bucket)
 
 df = transforma_raw_para_processed(spark, df, bucket)
 
